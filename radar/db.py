@@ -29,6 +29,23 @@ CREATE TABLE IF NOT EXISTS posts (
     posted_at  INTEGER,                -- Unix timestamp
     text       TEXT NOT NULL           -- plain text, HTML removed
 );
+
+-- One row per Claude call: the extracted fields, plus what the call cost.
+CREATE TABLE IF NOT EXISTS extractions (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id         INTEGER NOT NULL REFERENCES posts(id),
+    model           TEXT    NOT NULL,              -- e.g. 'claude-opus-5-5'
+    prompt_version  TEXT    NOT NULL,              -- e.g. 'v1'
+    run             INTEGER NOT NULL DEFAULT 1,    -- 1, 2, 3 for the repeat test
+    data            TEXT,                          -- extracted fields as JSON, NULL if it failed
+    stop_reason     TEXT,                          -- why Claude stopped
+    input_tokens    INTEGER,
+    output_tokens   INTEGER,
+    cost_usd        REAL,
+    created_at      INTEGER NOT NULL,
+    UNIQUE (post_id, model, prompt_version, run)
+);
+
 """
 
 
