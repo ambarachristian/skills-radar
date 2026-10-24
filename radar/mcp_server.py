@@ -39,12 +39,15 @@ def postings_search(query: str = "", months: list[str] | None = None,
                     work_mode: WorkMode | None = None, skill: str | None = None,
                     country: str | None = None, city: str | None = None,
                     seniority: Seniority | None = None, ai_work: bool | None = None,
+                    sort_by_salary: bool = False,
                     limit: int = 10) -> dict:
     """Find and count job posts.
 
     Returns total_matches (counted over ALL matching posts), a USD salary summary
     over all matches, and up to `limit` postings with their fields and HN link.
     For "how many" questions use total_matches, never the length of the list.
+    salary_usd covers only posts whose salary is stated in US dollars. Other
+    currencies are left out, not converted.
 
     Args:
         query: words that must all appear in the post, e.g. "rust embedded". "" = any.
@@ -55,9 +58,10 @@ def postings_search(query: str = "", months: list[str] | None = None,
         city: e.g. "London", "New York".
         seniority: only posts with at least one role at this level.
         ai_work: true = roles doing AI/ML work only, false = non-AI roles only.
-        limit: max postings returned. Counts and salaries always use all matches.
+        sort_by_salary: true = highest USD salary first ("best paying", "which post pays most").
+        limit: max postings returned, at most 25. Counts and salaries always use all matches.
     """
-    return ask(queries.search_postings, query=query, months=months, limit=limit,
+    return ask(queries.search_postings, query=query, months=months, limit=limit, sort_by_salary=sort_by_salary,
                work_mode=work_mode, skill=skill, country=country, city=city,
                seniority=seniority, ai_work=ai_work)
 

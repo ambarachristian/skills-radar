@@ -99,9 +99,13 @@ def public(job: dict) -> dict:
 
 
 def usd_salary_summary(jobs: list[dict]) -> dict:
-    """Computed in code over ALL matches, so the agent never averages a partial list."""
-    ranges = [(j["salary_min"], j["salary_max"] or j["salary_min"]) for j in jobs
-              if j["salary_currency"] == "USD" and j["salary_min"]]
+    """Computed in code over ALL matches, so the agent never averages a partial list.
+    A post counts if it gives a minimum, a maximum, or both ("up to $750k" counts)."""
+    ranges = []
+    for j in jobs:
+        lo, hi = j["salary_min"], j["salary_max"]
+        if j["salary_currency"] == "USD" and (lo or hi):
+            ranges.append((lo or hi, hi or lo))      # a missing end takes the other end's value
     if not ranges:
         return {"posts_with_usd_salary": 0}
     return {"posts_with_usd_salary": len(ranges),
@@ -111,7 +115,20 @@ def usd_salary_summary(jobs: list[dict]) -> dict:
 
 
 # --- The four questions --------------------------------------------------
-def search_postings(query: str = "", months=None, limit: int = 10, **filters) -> dict:
+MAX_LIMIT = 25   # never return more postings than this in one call
+
+
+def search_postings(query: str = "", months=None, limit: int = 10,
+                    sort_by_salary: bool = False, **filters) -> dict:
+    found = [j for j in load_jobs(check_months(months))
+             if matches(j, **filters) and has_words(j["_text"], query)]
+    if sort_by_salary:   # highest USD salary first; posts without a USD salary go last
+        found.sort(key=lambda j: (j["salary_max"] or j["salary_min"] or 0)
+                   if j["salary_currency"] == "USD" else 0, reverse=True)
+    limit = max(1, min(limit, MAX_LIMIT))
+    return {"total_matches": len(found),
+            "salary_usd": usd_salary_summary(found),
+            "postings": [public(j) for j in found[:limit]]}
     found = [j for j in load_jobs(check_months(months))
              if matches(j, **filters) and has_words(j["_text"], query)]
     return {"total_matches": len(found),
