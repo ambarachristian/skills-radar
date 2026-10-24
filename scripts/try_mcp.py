@@ -1,6 +1,6 @@
-"""Start the MCP server, list its tools, and call some of them.
+"""Smoke test: start the MCP server, list its tools, and call some of them. Free (no LLM calls).
 
-Usage:  python try_mcp.py
+Usage (from the project root):  python scripts/try_mcp.py
 """
 import asyncio
 import sys
