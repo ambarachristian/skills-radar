@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skills Radar</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-0: #f4f3f0;      /* page */
+    --surface-1: #fcfcfb;      /* cards and chart */
+    --border: #e2e1dc;
+    --grid: #ebeae6;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --accent: #2a78d6;
+    --bubble-user: #e6effb;
+    --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100;
+    --series-5: #e87ba4; --series-6: #008300; --series-7: #6250d6; --series-8: #e34948;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-0: #111110; --surface-1: #1a1a19; --border: #2e2e2c; --grid: #262624;
+      --text-primary: #f0efec; --text-secondary: #c3c2b7; --accent: #3987e5; --bubble-user: #1f2f45;
+      --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+      --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-0: #111110; --surface-1: #1a1a19; --border: #2e2e2c; --grid: #262624;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --accent: #3987e5; --bubble-user: #1f2f45;
+    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+    --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--surface-0); color: var(--text-primary);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { max-width: 1200px; margin: 0 auto; padding: 24px 16px 8px; }
+  h1 { margin: 0; font-size: 24px; }
+  header p { margin: 4px 0 0; color: var(--text-secondary); }
+  main { max-width: 1200px; margin: 0 auto; padding: 16px; display: grid; gap: 16px;
+         grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+  @media (max-width: 900px) { main { grid-template-columns: minmax(0, 1fr); } }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  h2 { margin: 0 0 4px; font-size: 17px; }
+  .muted { color: var(--text-secondary); font-size: 13px; margin: 0 0 12px; }
+  .chart-box { position: relative; height: 340px; }
+  form.row { display: flex; gap: 8px; margin: 12px 0 0; }
+  input[type=text] { flex: 1; min-width: 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+                     background: var(--surface-0); color: var(--text-primary); font: inherit; }
+  button { padding: 8px 14px; border: 0; border-radius: 8px; background: var(--accent); color: #fff;
+           font: inherit; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: wait; }
+  .error { color: #d03b3b; font-size: 13px; min-height: 1.5em; margin: 4px 0 0; }
+  details { margin-top: 12px; }
+  summary { cursor: pointer; color: var(--text-secondary); font-size: 13px; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 8px; }
+  #table th, #table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  #table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  /* Tables inside chat answers: wrap text, and scroll inside the bubble if still too wide */
+  #messages { overflow-x: hidden; }
+  .msg table { display: block; max-width: 100%; overflow-x: auto; margin: 4px 0 8px; }
+  .msg th, .msg td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--grid); }
+
+  .chat { display: flex; flex-direction: column; min-height: 520px; }
+  #messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
+              max-height: 60vh; padding-right: 4px; }
+  .msg { padding: 10px 12px; border-radius: 10px; max-width: 95%; overflow-wrap: anywhere; }
+  .msg.user { align-self: flex-end; background: var(--bubble-user); }
+  .msg.bot { align-self: flex-start; background: var(--surface-0); }
+  .msg.bot p { margin: 0 0 8px; } .msg.bot p:last-child { margin: 0; }
+  .msg.bot ul { margin: 4px 0 8px; padding-left: 20px; }
+  .msg a { color: var(--accent); }
+  .meta { font-size: 12px; color: var(--text-secondary); margin-top: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Skills Radar</h1>
+  <p>What employers ask for in Hacker News "Who is hiring?" threads. Skills extracted by Claude, checked on 50 hand-labeled posts.</p>
+</header>
+
+<main>
+  <section class="card" aria-labelledby="chart-title">
+    <h2 id="chart-title">Skill demand by month</h2>
+    <p class="muted">Share of job posts asking for each skill. The latest month's top skills are shown, and you can add others.</p>
+    <div class="chart-box"><canvas id="chart" role="img" aria-label="Line chart of skill demand by month"></canvas></div>
+    <form class="row" id="add-form">
+      <input type="text" id="add-input" placeholder="Add a skill, e.g. Rust" aria-label="Skill to add">
+      <button type="submit">Add</button>
+    </form>
+    <p class="error" id="chart-error"></p>
+    <details>
+      <summary>Show the numbers as a table</summary>
+      <div class="table-wrap"><table id="table"></table></div>
+    </details>
+  </section>
+
+  <section class="card chat" aria-labelledby="chat-title">
+    <h2 id="chat-title">Ask the radar</h2>
+    <p class="muted">An agent answers from the data using 4 read-only tools. About $0.02–0.05 per question.</p>
+    <div id="messages" aria-live="polite"></div>
+    <form class="row" id="chat-form">
+      <input type="text" id="chat-input" placeholder="e.g. What skills go with Rust?" aria-label="Your question" maxlength="500">
+      <button type="submit" id="chat-send">Ask</button>
+    </form>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script>
+// ---------- Chart ----------
+let chart = null;
+let lastData = null;
+const extraSkills = [];                       // skills the visitor added
+
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const pct = share => share === null ? null : Math.round(share * 1000) / 10;   // 0.242 -> 24.2
+
+async function loadTrends() {
+  const res = await fetch("/api/trends?add=" + encodeURIComponent(extraSkills.join(",")));
+  const data = await res.json();
+  if (!res.ok) {
+    document.getElementById("chart-error").textContent = data.error;
+    extraSkills.pop();                        // drop the skill that failed
+    return;
+  }
+  document.getElementById("chart-error").textContent = "";
+  lastData = data;
+  drawChart(data);
+  drawTable(data);
+}
+
+function drawChart(data) {
+  const datasets = data.series.map((s, i) => {
+    const color = css(`--series-${i + 1}`);   // color follows the line's position, which stays fixed
+    return {
+      label: s.skill,
+      data: s.points.map(p => pct(p.share)),
+      points: s.points,
+      borderColor: color, backgroundColor: color,
+      borderWidth: 2, pointRadius: 4, pointHoverRadius: 6,
+      pointBorderColor: css("--surface-1"), pointBorderWidth: 2,
+    };
+  });
+  if (chart) chart.destroy();
+  chart = new Chart(document.getElementById("chart"), {
+    type: "line",
+    data: { labels: data.months, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },   // hover anywhere on a month
+      plugins: {
+        legend: { position: "bottom", labels: { color: css("--text-primary"), usePointStyle: true, boxWidth: 8 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const p = ctx.dataset.points[ctx.dataIndex];
+              return ` ${ctx.dataset.label}: ${pct(p.share)}% (${p.count} of ${p.job_count} posts)`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: { ticks: { color: css("--text-secondary") }, grid: { display: false } },
+        y: { beginAtZero: true,
+             title: { display: true, text: "% of job posts", color: css("--text-secondary") },
+             ticks: { color: css("--text-secondary"), callback: v => v + "%" },
+             grid: { color: css("--grid") } },
+      },
+    },
+  });
+}
+
+function drawTable(data) {
+  // Built with textContent, never innerHTML: skill names are data, not HTML.
+  const table = document.getElementById("table");
+  table.replaceChildren();
+  const head = table.insertRow();
+  for (const label of ["Skill", ...data.months]) {
+    const th = document.createElement("th");
+    th.textContent = label;
+    head.appendChild(th);
+  }
+  for (const s of data.series) {
+    const row = table.insertRow();
+    row.insertCell().textContent = s.skill;
+    for (const p of s.points) {
+      const cell = row.insertCell();
+      cell.className = "num";
+      cell.textContent = `${pct(p.share)}% (${p.count}/${p.job_count})`;
+    }
+  }
+}
+
+document.getElementById("add-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const input = document.getElementById("add-input");
+  const skill = input.value.trim();
+  if (skill) { extraSkills.push(skill); input.value = ""; loadTrends(); }
+});
+
+// Redraw with the right colors when the system switches light/dark mode.
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => lastData && drawChart(lastData));
+
+// ---------- Chat ----------
+const chatHistory = [];                         // the conversation so far, sent with each question
+
+// Answers can contain text that came from job posts: sanitize before showing as HTML.
+DOMPurify.addHook("afterSanitizeAttributes", node => {
+  if (node.tagName === "A") { node.setAttribute("target", "_blank"); node.setAttribute("rel", "noopener noreferrer"); }
+});
+
+function addMessage(role, text) {
+  const div = document.createElement("div");
+  div.className = "msg " + role;
+  if (role === "bot") div.innerHTML = DOMPurify.sanitize(marked.parse(text));
+  else div.textContent = text;
+  document.getElementById("messages").appendChild(div);
+  div.scrollIntoView({ behavior: "smooth", block: "end" });
+  return div;
+}
+
+document.getElementById("chat-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const input = document.getElementById("chat-input");
+  const button = document.getElementById("chat-send");
+  const question = input.value.trim();
+  if (!question) return;
+  input.value = "";
+  button.disabled = true;
+  addMessage("user", question);
+  const pending = addMessage("bot", "_Looking at the data…_");
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, history: chatHistory }),
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error || res.statusText);
+    pending.innerHTML = DOMPurify.sanitize(marked.parse(result.answer || "(no answer)"));
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    const tools = result.tool_calls.map(c => c.tool).join(", ") || "none";
+    meta.textContent = `Tools used: ${tools} · cost $${result.cost_usd.toFixed(3)}`;
+    pending.appendChild(meta);
+    chatHistory.push({ role: "user", content: question }, { role: "assistant", content: result.answer });
+  } catch (err) {
+    pending.textContent = "Something went wrong: " + err.message;
+  } finally {
+    button.disabled = false;
+    input.focus();
+  }
+});
+
+loadTrends();
+</script>
+</body>
+</html>

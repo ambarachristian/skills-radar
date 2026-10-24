@@ -27,13 +27,15 @@ SYSTEM_PROMPT = """You answer questions about tech job posts from Hacker News "W
 - Be concise."""
 
 
-async def answer(question: str, mcp_client: Client, claude: anthropic.AsyncAnthropic) -> dict:
-    """Run the agent loop for one question. Returns the answer, the tool calls and the cost."""
+async def answer(question: str, mcp_client: Client, claude: anthropic.AsyncAnthropic,
+                 history: list[dict] | None = None) -> dict:
+    """Run the agent loop for one question. `history` = earlier turns of the chat, as text.
+    Returns the answer, the tool calls and the cost."""
     listed = await mcp_client.list_tools()
     tools = [{"name": t.name, "description": t.description, "input_schema": t.input_schema}
              for t in listed.tools]
 
-    messages = [{"role": "user", "content": question}]
+    messages = [*(history or []), {"role": "user", "content": question}]
     trace = []                     # every tool call made, for debugging and for evals
     cost = 0.0
     for _ in range(MAX_TURNS):
