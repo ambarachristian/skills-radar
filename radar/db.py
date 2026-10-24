@@ -56,3 +56,9 @@ def connect() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row   # lets us read columns by name: row["month"]
     conn.executescript(SCHEMA)
     return conn
+
+def connect_readonly() -> sqlite3.Connection:
+    """Open the database read-only: any attempt to write raises an error."""
+    conn = sqlite3.connect(f"file:{DB_PATH.as_posix()}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    return conn
